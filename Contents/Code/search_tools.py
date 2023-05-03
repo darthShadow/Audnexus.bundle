@@ -43,20 +43,35 @@ class SearchTool:
         """
             Checks filename (for books) and/or search query for ASIN to quick match.
         """
-        # Check filename for ASIN if content type is books
-        if self.media.filename and self.content_type == 'books':
-            try:
-                # Provide a plain filename for ASIN search
-                filename_unquoted = urllib.unquote(
-                    self.media.filename).decode('utf8')
-                filename_search_asin = self.search_asin(filename_unquoted)
-            except Exception as e:
-                log.error('Error checking filename for ASIN: %s', e)
+        # Check filename & ID for ASIN if content type is books
+        if self.content_type == 'books':
 
-            if filename_search_asin:
-                log.info('ASIN found in filename')
-                self.check_for_region(filename_unquoted)
-                return filename_search_asin.group(0) + '_' + self.region_override
+            # Check the ID for ASIN
+            if self.media.parent_metadata:
+                media_id = self.media.parent_metadata.id
+                id_asin = self.search_asin(media_id)
+
+                if id_asin:
+                    log.info('ASIN found in ID')
+                    self.check_for_region(id_asin.group(0))
+                    return id_asin.group(0) + '_' + self.region_override
+
+            # Check filename for ASIN
+            if self.media.filename:
+                filename_search_asin = None
+
+                try:
+                    # Provide a plain filename for ASIN search
+                    filename_unquoted = urllib.unquote(
+                        self.media.filename).decode('utf8')
+                    filename_search_asin = self.search_asin(filename_unquoted)
+                except Exception as e:
+                    log.error('Checking filename for ASIN: %s', e)
+
+                if filename_search_asin:
+                    log.info('ASIN found in filename')
+                    self.check_for_region(filename_unquoted)
+                    return filename_search_asin.group(0) + '_' + self.region_override
 
         # Check search query for ASIN
         # Default to album and use artist if no album
